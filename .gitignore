@@ -1,0 +1,12 @@
+.env
+__pycache__/
+*.pyc
+venv/
+.venv/
+debug_*.png
+test_scraper.py
+*.db
+business_dump.html
+analyze_result.json
+search_result.json
+classes.txt

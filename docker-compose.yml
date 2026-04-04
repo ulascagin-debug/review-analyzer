@@ -1,0 +1,15 @@
+services:
+  analyzer-api:
+    build: .
+    restart: always
+    ports:
+      - "3001:8001"
+    env_file:
+      - .env
+    environment:
+      - PORT=8001
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
