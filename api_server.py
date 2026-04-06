@@ -1,3 +1,6 @@
+import nest_asyncio
+nest_asyncio.apply()
+
 """
 REST API Server for Review Analyzer.
 Wraps the existing scraper + OpenAI pipeline behind FastAPI endpoints.
@@ -8,11 +11,11 @@ import os
 import json
 import asyncio
 import logging
-from typing import Optional
+from typing import Optional, Annotated
 
 import httpx
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -23,6 +26,20 @@ from openai import OpenAI
 from scraper import search_businesses_sync, deep_scrape_competitors_sync
 
 load_dotenv()
+
+ANALYZER_SECRET_KEY = os.getenv("ANALYZER_SECRET_KEY", "")
+
+
+async def verify_bearer_token(authorization: Annotated[str | None, Header()] = None):
+    """Verify Bearer token matches ANALYZER_SECRET_KEY."""
+    if not ANALYZER_SECRET_KEY:
+        return  # No key configured → skip check
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header.")
+    token = authorization[7:]
+    if token != ANALYZER_SECRET_KEY:
+        raise HTTPException(status_code=401, detail="Invalid API key.")
+
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
@@ -207,7 +224,35 @@ RESPOND WITH ONLY a valid JSON object (no markdown, no explanation) matching thi
       "<Casual social post with emoji, addressing a real gap in the market>",
       "<Second post, different angle>"
     ]
-  }
+  },
+  "own_business_analysis": {
+    "strengths": [],
+    "weaknesses": []
+  },
+  "competitor_issues": {
+    "rakip1": ["x", "y"],
+    "rakip2": ["z"]
+  },
+  "competitor_strengths_categorized": {
+    "Hız/Servis": {
+      "leaders": ["rakip1"],
+      "how_to_beat": "strateji"
+    }
+  },
+  "business_scale_analysis": {
+    "estimated_scale": "small|medium|large",
+    "budget_appropriate_actions": []
+  },
+  "top_3_competitors": [
+    {
+      "name": "rakip1",
+      "rating": 4.5,
+      "review_count": 120,
+      "key_strengths": [],
+      "key_weaknesses": [],
+      "threat_level": "high|medium|low"
+    }
+  ]
 }
 
 ═══════════════════════════════════════════════════
@@ -616,7 +661,7 @@ class SearchRequest(BaseModel):
     district: str = ""
 
 
-@app.post("/search")
+@app.post("/search", dependencies=[Depends(verify_bearer_token)])
 async def search_businesses(req: SearchRequest):
     """Search Google Maps for businesses using Playwright scraper."""
     logger.info(f"Search request: {req.category} in {req.district}, {req.city}, {req.country}")
@@ -648,7 +693,7 @@ class AnalyzeFromUIRequest(BaseModel):
     business_id: Optional[int] = None
 
 
-@app.post("/analyze")
+@app.post("/analyze", dependencies=[Depends(verify_bearer_token)])
 async def analyze_from_ui(req: AnalyzeFromUIRequest):
     """Analysis endpoint matching the frontend's expected format."""
     logger.info(f"UI Analyze: {req.category} in {req.district}, {req.city}")
@@ -1161,3 +1206,4 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", "8001"))
     logger.info(f"Starting Review Analyzer API on port {port}")
     uvicorn.run(app, host="0.0.0.0", port=port)
+

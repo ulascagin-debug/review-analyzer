@@ -54,6 +54,44 @@ except Exception as e:
     logger.warning(f"Scheduler start failed (non-fatal): {e}")
 
 # ---------------------------------------------------------------------------
+# API Key Protection
+# ---------------------------------------------------------------------------
+
+@app.route("/health")
+def health():
+    return jsonify({"status": "ok"})
+
+
+@app.before_request
+def check_api_key():
+    # Exempt public routes from auth
+    public_paths = ["/health", "/", "/token"]
+    if request.path in public_paths or request.path.startswith("/static"):
+        return None
+
+    # Allow same-origin requests (frontend served from this server)
+    referer = request.headers.get("Referer", "")
+    origin = request.headers.get("Origin", "")
+    host = request.host_url.rstrip("/")
+    if referer.startswith(host) or origin.startswith(host):
+        return None
+
+    secret = os.environ.get("ANALYZER_SECRET_KEY")
+    if not secret:
+        # No key configured → skip check
+        return None
+
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return jsonify({"error": "Missing or invalid Authorization header."}), 401
+
+    token = auth_header[7:]
+    if token != secret:
+        return jsonify({"error": "Invalid API key."}), 401
+
+    return None
+
+# ---------------------------------------------------------------------------
 # AI Prompts
 # ---------------------------------------------------------------------------
 
@@ -552,4 +590,4 @@ def export_csv():
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    app.run(host='0.0.0.0', port=5000, debug=False)

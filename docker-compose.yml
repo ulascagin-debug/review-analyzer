@@ -13,3 +13,20 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+  flask-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.flask
+    restart: always
+    ports:
+      - "3002:5000"
+    env_file:
+      - .env
+    environment:
+      - FLASK_ENV=production
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
