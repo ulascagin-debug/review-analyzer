@@ -123,13 +123,19 @@ async def _search_businesses_logic(category, city, district, country, max_busine
             except:
                 await page.wait_for_timeout(2000)
 
+            # Check if Google Maps redirected directly to the exact place
+            if "/maps/place/" in page.url:
+                name_el = page.locator('h1').first
+                name = await name_el.inner_text() if await name_el.count() > 0 else category
+                return {"businesses": [{"name": name.strip(), "url": page.url}]}
+
             feed = page.locator(feed_selector)
             if await feed.count() > 0:
                 for _ in range(30):
                     await feed.evaluate('el => el.scrollTop = el.scrollHeight')
                     await page.wait_for_timeout(800)
 
-            # Find all links
+            # Find all links in the feed
             entries = page.locator('a[href*="/maps/place/"]')
             entry_count = await entries.count()
             
