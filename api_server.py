@@ -1,5 +1,4 @@
-import nest_asyncio
-nest_asyncio.apply()
+
 
 """
 REST API Server for Review Analyzer.
@@ -187,6 +186,23 @@ RESPOND WITH ONLY a valid JSON object (no markdown, no explanation) matching thi
     "rating": <estimated rating 1.0-5.0>,
     "total_reviews": <number of target reviews analyzed, 0 if competitor_only>
   },
+  "combinatorial_analysis": [
+    {
+      "combination_type": "Tekli Analiz",
+      "target": "Sadece X olanlar (e.g. Sadece Kafe)",
+      "analysis": "<sentiment, common complaints, strengths, competitor comparison for this tier>"
+    },
+    {
+      "combination_type": "İkili Analiz",
+      "target": "X + Y olanlar",
+      "analysis": "<sentiment, common complaints, strengths, competitor comparison for this combination>"
+    },
+    {
+      "combination_type": "Tam Eşleşme",
+      "target": "Tüm seçilen kategorileri kapsayanlar",
+      "analysis": "<sentiment, common complaints, strengths, competitor comparison for the full hybrid experience>"
+    }
+  ],
   "competitors": [
     {
       "name": "<REAL business name as it appears in reviews>",
